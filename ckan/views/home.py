@@ -10,6 +10,9 @@ import ckan.lib.helpers as h
 
 from ckan.common import g, config, _
 
+CACHE_PARAMETERS = [u'__cache', u'__no_cache__']
+
+
 home = Blueprint(u'home', __name__)
 
 
@@ -18,9 +21,9 @@ def before_request():
     u'''set context and check authorization'''
     try:
         context = {
-                u'model': model,
-                u'user': g.user,
-                u'auth_user_obj': g.userobj}
+            u'model': model,
+            u'user': g.user,
+            u'auth_user_obj': g.userobj}
         logic.check_access(u'site_read', context)
     except logic.NotAuthorized:
         abort(403)
@@ -34,7 +37,7 @@ def index():
         data_dict = {u'q': u'*:*',
                      u'facet.field': h.facets(),
                      u'rows': 4,
-                     u'start': 4,
+                     u'start': 0,
                      u'sort': u'view_recent desc',
                      u'fq': u'capacity:"public"'}
         query = logic.get_action(u'package_search')(context, data_dict)
@@ -42,9 +45,19 @@ def index():
         g.package_count = query['count']
         g.datasets = query['results']
 
+        org_label = h.humanize_entity_type(
+            u'organization',
+            h.default_group_type(u'organization'),
+            u'facet label') or _(u'Organizations')
+
+        group_label = h.humanize_entity_type(
+            u'group',
+            h.default_group_type(u'group'),
+            u'facet label') or _(u'Groups')
+
         g.facet_titles = {
-            u'organization': _(u'Organizations'),
-            u'groups': _(u'Groups'),
+            u'organization': org_label,
+            u'groups': group_label,
             u'tags': _(u'Tags'),
             u'res_format': _(u'Formats'),
             u'license': _(u'Licenses'),
