@@ -14,12 +14,12 @@ to use our file as the promoted image on the front page.
 
 .. seealso::
 
-   :doc:`webassets`
+   :doc:`fanstatic`
 
-    If you're adding CSS files consider using Webassets instead of
+    If you're adding CSS files consider using Fanstatic instead of
     :ref:`extra_public_paths`, to take advantage of extra features.
-    See :doc:`webassets`. If you're adding |javascript| modules you have to
-    use Webassets, see :doc:`javascript`.
+    See :doc:`fanstatic`. If you're adding |javascript| modules you have to
+    use Fanstatic, see :doc:`javascript`.
 
 First, create a ``public`` directory in your extension with a
 ``promoted-image.jpg`` file in it::

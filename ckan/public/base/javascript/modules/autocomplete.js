@@ -21,7 +21,6 @@ this.ckan.module('autocomplete', function (jQuery) {
     /* Options for the module */
     options: {
       tags: false,
-      createtags: true,
       key: false,
       label: false,
       items: 10,
@@ -62,13 +61,6 @@ this.ckan.module('autocomplete', function (jQuery) {
       if (!this.el.is('select')) {
         if (this.options.tags) {
           settings.tags = this._onQuery;
-
-          // Disable creating new tags
-          if (!this.options.createtags) {
-            settings.createSearchChoice = function(params) {
-              return undefined;
-            }
-          }
         } else {
           settings.query = this._onQuery;
           settings.createSearchChoice = this.formatTerm;
@@ -186,20 +178,15 @@ this.ckan.module('autocomplete', function (jQuery) {
      *
      * Returns a text string.
      */
-    formatResult: function (state, container, query, escapeMarkup) {
-      var term = this._lastTerm || (query ? query.term : null) || null; // same as query.term
+    formatResult: function (state, container, query) {
+      var term = this._lastTerm || null; // same as query.term
 
       if (container) {
         // Append the select id to the element for styling.
         container.attr('data-value', state.id);
       }
 
-      var result = [];
-      $(state.text.split(term)).each(function() {
-        result.push(escapeMarkup ? escapeMarkup(this) : this);
-      });
-
-      return result.join(term && (escapeMarkup ? escapeMarkup(term) : term).bold());
+      return state.text.split(term).join(term && term.bold());
     },
 
     /* Formatter for the select2 plugin that returns a string used when

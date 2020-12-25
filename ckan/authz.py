@@ -2,18 +2,17 @@
 
 import functools
 import sys
+import re
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from logging import getLogger
 
-import six
-
 from ckan.common import config
-from ckan.common import asbool
+from paste.deploy.converters import asbool
 
 import ckan.plugins as p
 import ckan.model as model
-from ckan.common import _, g
+from ckan.common import OrderedDict, _, c
 
 import ckan.lib.maintain as maintain
 
@@ -102,20 +101,14 @@ class AuthFunctions:
                     resolved_auth_function_plugins[name] = plugin.name
                     fetched_auth_functions[name] = auth_function
 
-        for name, func_list in six.iteritems(chained_auth_functions):
-            if (name not in fetched_auth_functions and
-                    name not in self._functions):
+        for name, func_list in chained_auth_functions.iteritems():
+            if name not in fetched_auth_functions:
                 raise Exception('The auth %r is not found for chained auth' % (
                     name))
             # create the chain of functions in the correct order
             for func in reversed(func_list):
-                if name in fetched_auth_functions:
-                    prev_func = fetched_auth_functions[name]
-                else:
-                    # fallback to chaining off the builtin auth function
-                    prev_func = self._functions[name]
-                fetched_auth_functions[name] = (
-                    functools.partial(func, prev_func))
+                prev_func = fetched_auth_functions[name]
+                fetched_auth_functions[name] = functools.partial(func, prev_func)
 
         # Use the updated ones in preference to the originals.
         self._functions.update(fetched_auth_functions)
@@ -143,26 +136,19 @@ def is_sysadmin(username):
 
 
 def _get_user(username):
-    '''
-    Try to get the user from g, if possible.
-    If not fallback to using the DB
-    '''
+    ''' Try to get the user from c, if possible, and fallback to using the DB '''
     if not username:
         return None
     # See if we can get the user without touching the DB
     try:
-        if g.userobj and g.userobj.name == username:
-            return g.userobj
+        if c.userobj and c.userobj.name == username:
+            return c.userobj
     except AttributeError:
-        # g.userobj not set
+        # c.userobj not set
         pass
     except TypeError:
-        # c is not available (py2)
+        # c is not available
         pass
-    except RuntimeError:
-        # g is not available (py3)
-        pass
-
     # Get user from the DB
     return model.User.get(username)
 
@@ -214,8 +200,7 @@ def is_authorized(action, context, data_dict=None):
             return {
                 'success': False,
                 'msg': 'Action {0} requires an authenticated user'.format(
-                    (auth_function if not isinstance(auth_function, functools.partial)
-                        else auth_function.func).__name__)
+                    auth_function.__name__)
             }
 
         return auth_function(context, data_dict)
@@ -225,17 +210,10 @@ def is_authorized(action, context, data_dict=None):
 
 # these are the permissions that roles have
 ROLE_PERMISSIONS = OrderedDict([
-    ('admin', ['admin', 'membership']),
+    ('admin', ['admin']),
     ('editor', ['read', 'delete_dataset', 'create_dataset', 'update_dataset', 'manage_group']),
     ('member', ['read', 'manage_group']),
 ])
-
-
-def get_collaborator_capacities():
-    if check_config_permission('allow_admin_collaborators'):
-        return ('admin', 'editor', 'member')
-    else:
-        return ('editor', 'member')
 
 
 def _trans_role_admin():
@@ -396,70 +374,18 @@ def has_user_permission_for_some_org(user_name, permission):
 def get_user_id_for_username(user_name, allow_none=False):
     ''' Helper function to get user id '''
     # first check if we have the user object already and get from there
-    user = _get_user(user_name)
+    try:
+        if c.userobj and c.userobj.name == user_name:
+            return c.userobj.id
+    except TypeError:
+        # c is not available
+        pass
+    user = model.User.get(user_name)
     if user:
         return user.id
     if allow_none:
         return None
     raise Exception('Not logged in user')
-
-
-def can_manage_collaborators(package_id, user_id):
-    '''
-    Returns True if a user is allowed to manage the collaborators of a given
-    dataset.
-
-    Currently a user can manage collaborators if:
-
-    1. Is an administrator of the organization the dataset belongs to
-    2. Is a collaborator with role "admin" (
-        assuming :ref:`ckan.auth.allow_admin_collaborators` is set to True)
-    3. Is the creator of the dataset and the dataset does not belong to an
-        organization (
-        requires :ref:`ckan.auth.create_dataset_if_not_in_organization`
-        and :ref:`ckan.auth.create_unowned_dataset`)
-    '''
-    pkg = model.Package.get(package_id)
-
-    owner_org = pkg.owner_org
-
-    if (not owner_org
-            and check_config_permission('create_dataset_if_not_in_organization')
-            and check_config_permission('create_unowned_dataset')
-            and pkg.creator_user_id == user_id):
-        # User is the creator of this unowned dataset
-        return True
-
-    if has_user_permission_for_group_or_org(
-            owner_org, user_id, 'membership'):
-        # User is an administrator of the organization the dataset belongs to
-        return True
-
-    # Check if user is a collaborator with admin role
-    return user_is_collaborator_on_dataset(user_id, pkg.id, 'admin')
-
-
-def user_is_collaborator_on_dataset(user_id, dataset_id, capacity=None):
-    '''
-    Returns True if the provided user is a collaborator on the provided
-    dataset.
-
-    If capacity is provided it restricts the check to the capacity
-    provided (eg `admin` or `editor`). Multiple capacities can be
-    provided passing a list
-
-    '''
-
-    q = model.Session.query(model.PackageMember) \
-        .filter(model.PackageMember.user_id == user_id) \
-        .filter(model.PackageMember.package_id == dataset_id)
-
-    if capacity:
-        if isinstance(capacity, six.string_types):
-            capacity = [capacity]
-        q = q.filter(model.PackageMember.capacity.in_(capacity))
-
-    return q.count() > 0
 
 
 CONFIG_PERMISSIONS_DEFAULTS = {
@@ -475,11 +401,6 @@ CONFIG_PERMISSIONS_DEFAULTS = {
     'create_user_via_api': False,
     'create_user_via_web': True,
     'roles_that_cascade_to_sub_groups': 'admin',
-    'public_activity_stream_detail': False,
-    'allow_dataset_collaborators': False,
-    'allow_admin_collaborators': False,
-    'allow_collaborators_to_change_owner_org': False,
-    'create_default_api_keys': False,
 }
 
 
@@ -528,7 +449,7 @@ def auth_is_registered_user():
 def auth_is_loggedin_user():
     ''' Do we have a logged in user '''
     try:
-        context_user = g.user
+        context_user = c.user
     except TypeError:
         context_user = None
     return bool(context_user)

@@ -42,22 +42,20 @@ import logging
 import os
 import os.path
 
-import six
 from babel import Locale
 from babel.core import (LOCALE_ALIASES,
                         get_locale_identifier,
                         UnknownLocaleError)
 from babel.support import Translations
+from paste.deploy.converters import aslist
+from pylons import i18n
+import pylons
 import polib
 
-from ckan.common import config, is_flask_request, aslist
+from ckan.common import config, is_flask_request
 import ckan.i18n
 from ckan.plugins import PluginImplementations
 from ckan.plugins.interfaces import ITranslation
-
-if six.PY2:
-    from pylons import i18n as pylons_i18n
-    import pylons
 
 
 log = logging.getLogger(__name__)
@@ -71,15 +69,6 @@ _CKAN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), u'..'))
 
 # Output directory for generated JavaScript translations
 _JS_TRANSLATIONS_DIR = os.path.join(_CKAN_DIR, u'public', u'base', u'i18n')
-
-
-def get_ckan_i18n_dir():
-    path = config.get(
-        u'ckan.i18n_directory', os.path.join(_CKAN_DIR, u'i18n'))
-    if os.path.isdir(os.path.join(path, u'i18n')):
-        path = os.path.join(path, u'i18n')
-
-    return path
 
 
 def get_locales_from_config():
@@ -110,7 +99,11 @@ def _get_locales():
     locale_order = config.get('ckan.locale_order', '').split()
 
     locales = ['en']
-    i18n_path = get_ckan_i18n_dir()
+    if config.get('ckan.i18n_directory'):
+        i18n_path = os.path.join(config.get('ckan.i18n_directory'), 'i18n')
+    else:
+        i18n_path = os.path.dirname(ckan.i18n.__file__)
+
     # For every file in the ckan i18n directory see if babel can understand
     # the locale. If yes, add it to the available locales
     for locale in os.listdir(i18n_path):
@@ -229,15 +222,12 @@ def _set_lang(lang):
     sets the Pylons root path to desired i18n_directory.
     This is needed as Pylons will only look for an i18n directory in
     the application root.'''
-    i18n_dir = get_ckan_i18n_dir()
-    if i18n_dir:
-        fake_config = {'pylons.paths': {
-            'root': os.path.dirname(i18n_dir.rstrip('/'))
-        }, 'pylons.package': config['pylons.package']}
-        pylons_i18n.set_lang(
-            lang, pylons_config=fake_config, class_=Translations)
+    if config.get('ckan.i18n_directory'):
+        fake_config = {'pylons.paths': {'root': config['ckan.i18n_directory']},
+                       'pylons.package': config['pylons.package']}
+        i18n.set_lang(lang, pylons_config=fake_config, class_=Translations)
     else:
-        pylons_i18n.set_lang(lang, class_=Translations)
+        i18n.set_lang(lang, class_=Translations)
 
 
 def handle_request(request, tmpl_context):
@@ -286,6 +276,10 @@ def get_lang():
     if is_flask_request():
         from ckan.config.middleware.flask_app import get_locale
         return get_locale()
+    else:
+        langs = i18n.get_lang()
+        if langs:
+            return langs[0]
     return 'en'
 
 
@@ -353,7 +347,7 @@ def _build_js_translation(lang, source_filenames, entries, dest_filename):
                     plural.append(msgstr)
     with open(dest_filename, u'w') as f:
         s = json.dumps(result, sort_keys=True, indent=2, ensure_ascii=False)
-        f.write(six.ensure_str(s))
+        f.write(s.encode(u'utf-8'))
 
 
 def build_js_translations():
@@ -366,7 +360,9 @@ def build_js_translations():
     strings that are actually used in JS files.
     '''
     log.debug(u'Generating JavaScript translations')
-    ckan_i18n_dir = get_ckan_i18n_dir()
+    ckan_i18n_dir = config.get(u'ckan.i18n_directory',
+                               os.path.join(_CKAN_DIR, u'i18n'))
+
     # Collect all language codes (an extension might add support for a
     # language that isn't supported by CKAN core, yet).
     langs = set()
@@ -382,7 +378,7 @@ def build_js_translations():
     # the POT files for that, since they contain all translation entries
     # (even those for which no translation exists, yet).
     js_entries = set()
-    for i18n_dir, domain in six.iteritems(i18n_dirs):
+    for i18n_dir, domain in i18n_dirs.iteritems():
         pot_file = os.path.join(i18n_dir, domain + u'.pot')
         if os.path.isfile(pot_file):
             js_entries.update(_get_js_translation_entries(pot_file))
@@ -397,7 +393,7 @@ def build_js_translations():
                     u'LC_MESSAGES',
                     domain + u'.po'
                 )
-                for i18n_dir, domain in six.iteritems(i18n_dirs)
+                for i18n_dir, domain in i18n_dirs.iteritems()
             ) if os.path.isfile(fn)
         ]
         if not po_files:

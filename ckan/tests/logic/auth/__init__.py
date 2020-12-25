@@ -1,5 +1,6 @@
 # encoding: utf-8
-"""**All auth functions should have tests.**
+
+'''**All auth functions should have tests.**
 
 Most auth function tests should be unit tests that test the auth function in
 isolation, without bringing in other parts of CKAN or touching the database.
@@ -15,4 +16,4 @@ Here's an example of a simple :py:mod:`ckan.logic.auth` test:
    :start-after: # START-AFTER
    :end-before: # END-BEFORE
 
-"""
+'''

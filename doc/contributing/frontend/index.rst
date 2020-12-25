@@ -6,7 +6,7 @@ Frontend development guidelines
    :maxdepth: 1
 
    templating
-   assets
+   resources
    template-tutorial
    template-blocks
    javascript-module-tutorial
@@ -25,7 +25,7 @@ Instructions for installing |nodejs| can be found on the |nodejs| `website
 On Ubuntu, run the following to install |nodejs| official repository and the node
 package::
 
-    curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash -
+    curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash -
     sudo apt-get install -y nodejs
 
 .. note:: If you use the package on the default Ubuntu repositories (eg ``sudo apt-get install nodejs``),
@@ -34,18 +34,22 @@ package::
 
         ln -s /usr/bin/nodejs /usr/bin/node
 
+    Also npm (the |nodejs| package manager) needs to be installed separately::
+
+        sudo apt-get install npm
+
     For more information, refer to the |nodejs| `instructions
     <https://nodejs.org/en/download/package-manager/#debian-and-ubuntu-based-linux-distributions>`_.
 
-Dependencies can then be installed via the node package manager (npm).
-We use ``gulp`` to make our Less compiler a watcher
+Less can then be installed via the node package manager (npm).
+We also use ``nodewatch`` to make our Less compiler a watcher
 style script.
 
 ``cd`` into the CKAN source folder (eg |virtualenv|/src/ckan ) and run:
 
 ::
 
-    $ npm install
+    $ npm install less@1.7.5 nodewatch
 
 
 You may need to use ``sudo`` depending on your CKAN install type.
@@ -77,6 +81,16 @@ All front-end files to be served via a web server are located in the
       underscore.js
       bootstrap.css
       ...
+    test/
+      index.html
+      spec/
+        main.spec.js
+        utils.spec.js
+      vendor/
+        mocha.js
+        mocha.css
+        chai.js
+      ...
 
 All files and directories should be lowercase with hyphens used to
 separate words.
@@ -99,6 +113,10 @@ vendor
     be prefixed with the library name. If a dependency has many files
     (such as bootstrap) then the entire directory should be included as
     distributed by the maintainer.
+test
+    Contains the test runner *index.html*. *vendor* contains all test
+    dependencies and libraries. *spec* contains the actual test files.
+    Each test file should be the filename with *.spec* appended.
 
 -----------
 Stylesheets
@@ -109,13 +127,11 @@ before beginning development by running:
 
 ::
 
-    $ npm run watch
+    $ ./bin/less
 
 This will watch for changes to all of the less files and automatically
-rebuild the CSS for you. To quit the script press ``ctrl-c``. If you
-need sourcemaps for debugging, set `DEBUG` environment variable. I.e::
-
-  $ DEBUG=1 npm run watch
+rebuild the CSS for you. To quit the script press ``ctrl-c``. There is also
+``--production`` flag for compiling the production ``main.css``.
 
 There are many Less files which attempt to group the styles in useful
 groups. The main two are:
@@ -130,7 +146,7 @@ ckan.less:
 
 .. Note::
     Whenever a CSS change effects ``main.less`` it's important than after
-    the merge into master that a ``$ npm run build`` should be
+    the merge into master that a ``$ ./bin/less --production`` should be
     run and commited.
 
 There is a basic pattern primer available at:
@@ -291,9 +307,21 @@ and ``jQuery.proxyAll()``.
 Unit tests
 ==========
 
+There is currently a test suite available at:
+http://localhost:5000/base/test/index.html
+
 Every core component, module and plugin should have a set of unit tests.
 Tests can be filtered using the ``grep={regexp}`` query string
 parameter.
+
+The libraries used for the tests are as follows.
+
+-  `Mocha <http://visionmedia.github.com/mocha/>`_: A test runner using
+   a BDD style syntax.
+-  `Chai <http://chaijs.com>`_: An assertion library (we use the assert
+   style).
+-  `Sinon <http://sinonjs.org>`_: A stubbing library, can stub objects,
+   timers and ajax requests.
 
 Each file has a description block for it's top level object and then within
 that a nested description for each method that is to be tested::
@@ -314,30 +342,18 @@ objects for testing (all blocks share the same scope so test variables can
 be attached)::
 
     describe('ckan.module.MyModule()', function () {
-      before(() => {
-          // Open CKAN front page
-          cy.visit('/');
-
-          // Pull the class out of the registry.
-          cy.window().then(win => {
-            // make module available as this.MyModule
-            cy.wrap(win.ckan.module.registry['my-module']).as('MyModule');
-            win.jQuery('<div id="fixture">').appendTo(win.document.body)
-          })
-        });
+      // Pull the class out of the registry.
+      var MyModule = ckan.module.registry['my-module'];
 
       beforeEach(function () {
-        // window object is needed to access the javascript objects
-        cy.window().then(win => {
-          // Create a test element.
-          this.el = win.jQuery('<div />');
+        // Create a test element.
+        this.el = jQuery('<div />');
 
-          // Create a test sandbox.
-          this.sandbox = win.ckan.sandbox();
+        // Create a test sandbox.
+        this.sandbox = ckan.sandbox();
 
-          // Create a test module.
-          this.module = new this.MyModule(this.el, {}, this.sandbox);
-        });
+        // Create a test module.
+        this.module = new MyModule(this.el, {}, this.sandbox);
       });
 
       afterEach(function () {
@@ -346,29 +362,21 @@ be attached)::
       });
     });
 
-Templates can also be loaded using the ``.loadFixture()`` method that is
-available in all test contexts. Tests can be made asynchronous by using promises
-(Cypress returns a promise in almost all functions)::
+Templates can also be loaded using the ``.loadFixtures()`` method that is
+available in all test contexts. Tests can be made asynchronous by setting a
+``done`` argument in the callback (Mocha checks the arity of the functions)::
 
     describe('ckan.module.MyModule()', function () {
 
       before(function (done) {
-        cy.visit('/');
-
-        // Add a fixture element to page
-        cy.window().then(win => {
-            win.jQuery('<div id="fixture">').appendTo(win.document.body)
-        })
-
         // Load the template once.
-        cy.loadFixture('my-template.html').then((template) => {
-            cy.wrap(template).as('template');
+        this.loadFixture('my-template.html', function (html) {
+          this.template = html;
+          done();
         });
       });
 
       beforeEach(function () {
         // Assign the template to the module each time.
-        cy.window().then(win => {
-            win.jQuery('#fixture').html(this.template).children();
-        });
+        this.el = this.fixture.html(this.template).children();
       });

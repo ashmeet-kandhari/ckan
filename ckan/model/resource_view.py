@@ -2,9 +2,9 @@
 
 import sqlalchemy as sa
 
-from ckan.model import meta
-from ckan.model import types as _types
-from ckan.model import domain_object
+import meta
+import types as _types
+import domain_object
 
 __all__ = ['ResourceView', 'resource_view_table']
 

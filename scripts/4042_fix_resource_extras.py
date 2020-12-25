@@ -28,7 +28,7 @@ activated.
 '''
 
 import json
-from six.moves.configparser import ConfigParser
+from ConfigParser import ConfigParser
 from argparse import ArgumentParser
 from six.moves import input
 from sqlalchemy import create_engine

@@ -2,7 +2,10 @@
 
 from sqlalchemy import types, Column, Table
 
-from ckan.model import meta, types as _types, domain_object
+import meta
+import types as _types
+import tag
+import domain_object
 
 VOCABULARY_NAME_MIN_LENGTH = 2
 VOCABULARY_NAME_MAX_LENGTH = 100
@@ -35,7 +38,6 @@ class Vocabulary(domain_object.DomainObject):
 
     @property
     def tags(self):
-        from ckan.model import tag
         query = meta.Session.query(tag.Tag)
         return query.filter(tag.Tag.vocabulary_id == self.id)
 

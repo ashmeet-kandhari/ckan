@@ -206,8 +206,8 @@ Internationalizing strings in JavaScript code
 ---------------------------------------------
 
 Each :ref:`CKAN JavaScript module <javascript_modules>` offers the methods
-``_`` and ``ngettext``. The ``ngettext`` function is used to translate a single string which
-has both a singular and a plural form, whereas ``_`` is used to translate a single string only:
+``_`` and ``ngettext`` for translating singular and plural strings,
+respectively:
 
 .. code-block:: javascript
 
@@ -269,15 +269,13 @@ Like ``_``, ``ngettext`` can take additional placeholders:
     translation files are regenerated automatically if necessary when CKAN
     starts.
 
-    You can also regenerate the translation files manually using
-    ``ckan translation js``:
-
-    .. parsed-literal::
+    You can also regenerate the translation files manually using ``paster trans
+    js``::
 
         python setup.py extract_messages  # Extract translatable strings
         # Update .po files as desired
         python setup.py compile_catalog   # Compile .mo files for Python/Jinja
-        ckan -c |ckan.ini| translation js         # Compile JavaScript catalogs
+        paster trans js                   # Compile JavaScript catalogs
 
 
 .. note::

@@ -2,7 +2,7 @@
 
 import datetime
 import sqlalchemy
-from ckan.model import meta
+import meta
 
 dashboard_table = sqlalchemy.Table('dashboard', meta.metadata,
     sqlalchemy.Column('user_id', sqlalchemy.types.UnicodeText,

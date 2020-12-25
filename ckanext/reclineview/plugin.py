@@ -2,12 +2,9 @@
 
 from logging import getLogger
 
-import six
-
 from ckan.common import json, config
 import ckan.plugins as p
 import ckan.plugins.toolkit as toolkit
-from ckan.plugins.toolkit import _
 
 log = getLogger(__name__)
 ignore_empty = p.toolkit.get_validator('ignore_empty')
@@ -20,17 +17,8 @@ def get_mapview_config():
     Extracts and returns map view configuration of the reclineview extension.
     '''
     namespace = 'ckanext.spatial.common_map.'
-    return {k.replace(namespace, ''): v
-            for k, v in six.iteritems(config)
-            if k.startswith(namespace)}
-
-
-def get_dataproxy_url():
-    '''
-    Returns the value of the ckan.recline.dataproxy_url config option
-    '''
-    return config.get(
-        'ckan.recline.dataproxy_url', '//jsonpdataproxy.appspot.com')
+    return dict([(k.replace(namespace, ''), v) for k, v in config.iteritems()
+                 if k.startswith(namespace)])
 
 
 def in_list(list_possible_values):
@@ -95,8 +83,7 @@ class ReclineViewBase(p.SingletonPlugin):
 
     def get_helpers(self):
         return {
-            'get_map_config': get_mapview_config,
-            'get_dataproxy_url': get_dataproxy_url,
+            'get_map_config': get_mapview_config
         }
 
 
@@ -107,7 +94,7 @@ class ReclineView(ReclineViewBase):
 
     def info(self):
         return {'name': 'recline_view',
-                'title': _('Data Explorer'),
+                'title': 'Data Explorer',
                 'filterable': True,
                 'icon': 'table',
                 'requires_datastore': False,
@@ -122,9 +109,7 @@ class ReclineView(ReclineViewBase):
             return True
         resource_format = resource.get('format', None)
         if resource_format:
-            return resource_format.lower() in [
-                'csv', 'xls', 'xlsx', 'ods', 'tsv'
-            ]
+            return resource_format.lower() in ['csv', 'xls', 'xlsx', 'tsv']
         else:
             return False
 
@@ -136,7 +121,7 @@ class ReclineGridView(ReclineViewBase):
 
     def info(self):
         return {'name': 'recline_grid_view',
-                'title': _('Grid'),
+                'title': 'Grid',
                 'filterable': True,
                 'icon': 'table',
                 'requires_datastore': True,
@@ -178,7 +163,7 @@ class ReclineGraphView(ReclineViewBase):
             'series': [ignore_empty, in_list(self.list_datastore_fields)]
         }
         return {'name': 'recline_graph_view',
-                'title': _('Graph'),
+                'title': 'Graph',
                 'filterable': True,
                 'icon': 'bar-chart-o',
                 'requires_datastore': True,
@@ -239,7 +224,7 @@ class ReclineMapView(ReclineViewBase):
             'cluster_markers': [ignore_empty]
         }
         return {'name': 'recline_map_view',
-                'title': _('Map'),
+                'title': 'Map',
                 'schema': schema,
                 'filterable': True,
                 'icon': 'map-marker',

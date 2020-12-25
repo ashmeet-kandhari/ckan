@@ -1,12 +1,12 @@
 # encoding: utf-8
 
-from ckan.model import meta
+import meta
 import datetime
 import sqlalchemy
 
-from ckan.model import core
+import core
 import ckan.model
-from ckan.model import domain_object
+import domain_object
 
 
 class ModelFollowingModel(domain_object.DomainObject):
