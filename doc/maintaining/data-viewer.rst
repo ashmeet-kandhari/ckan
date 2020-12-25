@@ -203,45 +203,6 @@ an ``<img>`` tag pointing to the resource URL. You can provide an alternative
 URL on the edit view form. The available formats can be configured using the
 :ref:`ckan.preview.image_formats` configuration option.
 
-Video view
-++++++++++
-
-.. image:: /images/video_view.png
-
-View plugin: ``video_view``
-
-This plugin uses the HTML5 <video> tag to embed video content into a page,
-such as movie clip or other video streams.
-
-There are three supported video formats: MP4, WebM, and OGG.
-
-.. image:: /images/video_view_edit.png
-
-You can provide an alternative URL on the edit view form. Otherwise, the resource link will be used.
-
-Also, you can provide a poster image URL. The poster image will be shown while the
-video is downloading, or until the user hits the play button.
-If this is not provided, the first frame of the video will be used instead.
-
-Audio view
-++++++++++
-
-.. image:: /images/audio_view.png
-
-View plugin: ``audio_view``
-
-This plugin uses the HTML5 audio tag to embed an audio player on the page.
-
-Since we rely on HTML5 <audio> tag, there are three supported audio formats: MP3, WAV, and OGG.
-Notice. Browsers don't all support the same `file types`_ and `audio codecs`_.
-
-.. image:: /images/audio_view_edit.png
-
-You can provide an alternative URL on the edit view form. Otherwise, the resource link will be used.
-
-.. _file types: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers
-.. _audio codecs: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Audio_codecs
-
 Web page view
 +++++++++++++
 
@@ -323,14 +284,14 @@ will only appear when creating or updating datasets or resources, but not on
 existing ones.
 
 The migration process involves creating the necessary view objects in the
-database, which can be done using the ``ckan views create`` command.
+database, which can be done using the ``paster views create`` command.
 
-.. note:: The ``ckan views create`` command uses the search API to get all
+.. note:: The ``paster views create`` command uses the search API to get all
     necessary datasets and resources, so make sure your search
     index :ref:`is up to date  <rebuild search index>` before starting the
     migration process.
 
-The way the ``ckan views create`` commands works is getting all or a subset
+The way the ``paster views create`` commands works is getting all or a subset
 of the instance datasets from the search index, and for each of them checking
 against a list of view plugins if it is necessary to create a view object. This
 gets determined by each of the individual view plugins depending on the dataset's
@@ -351,11 +312,11 @@ asked if you want to continue (unless you pass the ``-y`` option)::
 If no view types are provided, the default ones are used
 (check `Defining views to appear by default`_ to see how these are defined)::
 
-    ckan -c |ckan.ini| views create
+    paster views create
 
 Specific view types can be also provided::
 
-    ckan -c |ckan.ini| views create image_view recline_view pdf_view
+    paster views create image_view recline_view pdf_view
 
 For certain view types (the ones with plugins included in the main CKAN core),
 default filters are applied to the search to only get relevant resources. For
@@ -366,16 +327,16 @@ You can also provide arbitrary search parameters like the ones supported by
 :py:func:`~ckan.logic.action.get.package_search`. This can be useful for
 instance to only include datasets with resources of a certain format::
 
-    ckan -c |ckan.ini| views create geojson_view -s '{"fq": "res_format:GEOJSON"}'
+    paster views create geojson_view -s '{"fq": "res_format:GEOJSON"}'
 
 To instead avoid certain formats you can do::
 
-    ckan -c |ckan.ini| views create -s '{"fq": "-res_format:HTML"}'
+    paster views create -s '{"fq": "-res_format:HTML"}'
 
 Of course this is not limited to resource formats, you can filter out or in
 using any field, as in a normal dataset search::
 
-    ckan -c |ckan.ini| views create -s '{"q": "groups:visualization-examples"}'
+    paster views create -s '{"q": "groups:visualization-examples"}'
 
 .. tip:: If you set the ``ckan_logger`` level to ``DEBUG`` on your
     configuration file you can see the full search parameters being sent
@@ -384,20 +345,20 @@ using any field, as in a normal dataset search::
 For convenience, there is also an option to create views on a particular
 dataset or datasets::
 
-    ckan -c |ckan.ini| views create -d dataset_id
+    paster views create -d dataset_id
 
-    ckan -c |ckan.ini| views create -d dataset_name -d dataset_name
+    paster views create -d dataset_name -d dataset_name
 
 
 Command line interface
 ----------------------
 
-The ``ckan views`` command allows to create and remove resource views objects
+The ``paster views`` command allows to create and remove resource views objects
 from the database in bulk.
 
 Check the command help for the full options::
 
-    ckan -c |ckan.ini| views create -h
+    paster views create -h
 
 
 .. todo:: Tutorial for writing custom view types.

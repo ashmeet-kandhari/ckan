@@ -128,4 +128,3 @@ appropriate one of these documents:
     upgrade-package-to-minor-release
     upgrade-source
     upgrade-postgres
-    upgrade-to-python3

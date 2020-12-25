@@ -2,8 +2,7 @@ this.ckan.module('recline_view', function (jQuery) {
   return {
     options: {
       site_url: "",
-      controlsClassName: "controls",
-      dataproxyUrl: "//jsonpdataproxy.appspot.com"
+      controlsClassName: "controls"
     },
 
     initialize: function () {
@@ -45,9 +44,6 @@ this.ckan.module('recline_view', function (jQuery) {
 
       if (!resourceData.datastore_active) {
           recline.Backend.DataProxy.timeout = 10000;
-
-          recline.Backend.DataProxy.dataproxy_url = this.options.dataproxyUrl;
-
           resourceData.backend =  'dataproxy';
       } else {
           resourceData.backend =  'ckan';

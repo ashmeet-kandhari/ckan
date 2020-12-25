@@ -1,78 +1,68 @@
 # encoding: utf-8
 
-import six
-import mock
-import pytest
+import nose
 
 from ckan import authz as auth
-from ckan.tests import factories
 
-_check = auth.check_config_permission
-
-
-@pytest.mark.ckan_config("ckan.auth.anon_create_dataset", None)
-@pytest.mark.parametrize(
-    "perm", ["anon_create_dataset", "ckan.auth.anon_create_dataset"]
-)
-def test_get_default_value_if_not_set_in_config(perm):
-    assert (
-        _check(perm) == auth.CONFIG_PERMISSIONS_DEFAULTS["anon_create_dataset"]
-    )
+from ckan.tests import helpers
 
 
-@pytest.mark.ckan_config("ckan.auth.anon_create_dataset", True)
-def test_config_overrides_default():
-    assert _check("anon_create_dataset") is True
+assert_equals = nose.tools.assert_equals
 
 
-@pytest.mark.ckan_config("ckan.auth.anon_create_dataset", True)
-def test_config_override_also_works_with_prefix():
-    assert _check("ckan.auth.anon_create_dataset") is True
+class TestCheckConfigPermission(object):
 
+    @helpers.change_config('ckan.auth.anon_create_dataset', None)
+    def test_get_default_value_if_not_set_in_config(self):
 
-@pytest.mark.ckan_config("ckan.auth.unknown_permission", True)
-def test_unknown_permission_returns_false():
-    assert _check("unknown_permission") is False
+        assert_equals(auth.check_config_permission(
+            'anon_create_dataset'),
+            auth.CONFIG_PERMISSIONS_DEFAULTS['anon_create_dataset'])
 
+    @helpers.change_config('ckan.auth.anon_create_dataset', None)
+    def test_get_default_value_also_works_with_prefix(self):
 
-def test_unknown_permission_not_in_config_returns_false():
-    assert _check("unknown_permission") is False
+        assert_equals(auth.check_config_permission(
+            'ckan.auth.anon_create_dataset'),
+            auth.CONFIG_PERMISSIONS_DEFAULTS['anon_create_dataset'])
 
+    @helpers.change_config('ckan.auth.anon_create_dataset', True)
+    def test_config_overrides_default(self):
 
-def test_default_roles_that_cascade_to_sub_groups_is_a_list():
-    assert isinstance(_check("roles_that_cascade_to_sub_groups"), list)
+        assert_equals(auth.check_config_permission(
+            'anon_create_dataset'),
+            True)
 
+    @helpers.change_config('ckan.auth.anon_create_dataset', True)
+    def test_config_override_also_works_with_prefix(self):
 
-@pytest.mark.ckan_config(
-    "ckan.auth.roles_that_cascade_to_sub_groups", "admin editor"
-)
-def test_roles_that_cascade_to_sub_groups_is_a_list():
-    assert sorted(_check("roles_that_cascade_to_sub_groups")) == sorted(
-        ["admin", "editor"]
-    )
+        assert_equals(auth.check_config_permission(
+            'ckan.auth.anon_create_dataset'),
+            True)
 
+    @helpers.change_config('ckan.auth.unknown_permission', True)
+    def test_unknown_permission_returns_false(self):
 
-@pytest.mark.skipif(six.PY3, reason='Only relevant to py2')
-@mock.patch('paste.registry.TypeError')
-def test_get_user_outside_web_request_py2(mock_TypeError):
-    auth._get_user('example')
-    assert mock_TypeError.called
+        assert_equals(auth.check_config_permission(
+            'unknown_permission'),
+            False)
 
+    def test_unknown_permission_not_in_config_returns_false(self):
 
-@pytest.mark.skipif(six.PY2, reason='Only relevant to py3')
-@mock.patch('flask.globals.RuntimeError')
-def test_get_user_outside_web_request_py3(mock_RuntimeError):
-    auth._get_user('example')
-    assert mock_RuntimeError.called
+        assert_equals(auth.check_config_permission(
+            'unknown_permission'),
+            False)
 
+    def test_default_roles_that_cascade_to_sub_groups_is_a_list(self):
 
-@pytest.mark.usefixtures('with_request_context', 'clean_db')
-def test_get_user_inside_web_request_returns_user_obj():
-    user = factories.User()
-    assert auth._get_user(user['name']).name == user['name']
+        assert isinstance(auth.check_config_permission(
+            'roles_that_cascade_to_sub_groups'),
+            list)
 
+    @helpers.change_config('ckan.auth.roles_that_cascade_to_sub_groups',
+                           'admin editor')
+    def test_roles_that_cascade_to_sub_groups_is_a_list(self):
 
-@pytest.mark.usefixtures('with_request_context')
-def test_get_user_inside_web_request_not_found():
-
-    assert auth._get_user('example') is None
+        assert_equals(sorted(auth.check_config_permission(
+            'roles_that_cascade_to_sub_groups')),
+            sorted(['admin', 'editor']))

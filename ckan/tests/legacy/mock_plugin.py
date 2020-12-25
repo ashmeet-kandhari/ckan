@@ -2,7 +2,6 @@
 
 from ckan.plugins import Plugin, SingletonPlugin
 
-
 class _MockPlugin(object):
     """
     MockPlugin tracks method calls via __getattr__ for rapid mocking of
@@ -14,7 +13,6 @@ class _MockPlugin(object):
 
     class MockMethod(object):
         registry = {}
-
         def __init__(self, boundto, name):
             self.name = name
             self.calls = []
@@ -42,12 +40,10 @@ class _MockPlugin(object):
         self.__mockmethods__ = {}
         self.calls = []
 
-
 class MockPlugin(_MockPlugin, Plugin):
     """
     Mock a plugin
     """
-
 
 class MockSingletonPlugin(_MockPlugin, SingletonPlugin):
     """

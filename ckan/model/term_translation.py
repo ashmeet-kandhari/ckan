@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, Table
 from sqlalchemy.types import UnicodeText
-from ckan.model import meta
+import meta
 
 __all__ = ['term_translation_table']
 
